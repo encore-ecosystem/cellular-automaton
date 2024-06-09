@@ -2,7 +2,7 @@ use crate::field::Field;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
 pub enum Neighborhood {
     Moore,
@@ -73,11 +73,21 @@ impl Neighborhood
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CellularAutomatonParams {
     pub neighborhood_type   : Neighborhood,
     pub neighborhood_radius : u8,   
     pub initial_density     : f64,
     pub survive_array       : Vec<usize>,
     pub birth_array         : Vec<usize>,
+}
+
+impl std::fmt::Display for CellularAutomatonParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "T: {:?}", self.neighborhood_type).unwrap();
+        writeln!(f, "R: {:?}", self.neighborhood_radius).unwrap();
+        writeln!(f, "D: {:.5}", self.initial_density).unwrap();
+        writeln!(f, "S: {:?}", self.survive_array).unwrap();
+        writeln!(f, "B: {:?}", self.birth_array)
+    }
 }

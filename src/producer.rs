@@ -1,67 +1,68 @@
-
-use crate::blockingq::BlockingQueue;
 use rand::{thread_rng, Rng};
 use std::collections::HashSet;
 use crate::rules::CellularAutomatonParams;
 use crate::rules::Neighborhood;
+use spmc::Sender;
 
 
 
-pub struct Producer 
+pub struct Producer
 {
-    tasks: BlockingQueue<CellularAutomatonParams>,
+    sender    : Sender<CellularAutomatonParams>,
 }
 
 
 impl Producer
 {
-    pub fn new() -> Self
+    pub fn new(sender : Sender<CellularAutomatonParams>) -> Self
     {
-        Self {
-            tasks: BlockingQueue::<CellularAutomatonParams>::new()
-        }
+        Self {sender}
     }
 
-    pub fn run_tasks_generation(&self, target_tasks: usize)
+    pub fn generate_task(&self) -> CellularAutomatonParams
     {
-        let mut current_complete: usize = 0;
         let mut rng = thread_rng();
-        while current_complete < target_tasks
-        {
-            let neighborhood_type: Neighborhood = rand::random();
-            let neighborhood_radius: u8 = rng.gen_range(1..6);
-            let initial_density = rng.gen();
 
-            let max_neighbor = neighborhood_type.get_max_neighbors(neighborhood_radius as usize);
+        let neighborhood_type: Neighborhood = rand::random();
+        let neighborhood_radius: u8 = rng.gen_range(1..6);
+        let initial_density = rng.gen();
 
-            let mut survive_candidates: HashSet<usize> = HashSet::from_iter(1..max_neighbor);
-            let mut survive_array = vec![];
-            for _ in 0..rng.gen_range(0..max_neighbor) {
-                let candidate_index = rng.gen_range(0..survive_candidates.len());
-                let candidate = survive_candidates.iter().nth(candidate_index).unwrap().clone();
-                survive_array.push(candidate);
-                survive_candidates.remove(&candidate);
-            }
+        let max_neighbor = neighborhood_type.get_max_neighbors(neighborhood_radius as usize);
 
-            let mut birth_candidates: HashSet<usize> = HashSet::from_iter(1..max_neighbor);
-            let mut birth_array = vec![];
-            for _ in 0..rng.gen_range(0..max_neighbor) {
-                let candidate_index = rng.gen_range(0..birth_candidates.len());
-                let candidate = birth_candidates.iter().nth(candidate_index).unwrap().clone();
-                birth_array.push(candidate);
-                birth_candidates.remove(&candidate);
-            }
-            
-            let task = CellularAutomatonParams{
-                neighborhood_type,
-                neighborhood_radius,
-                initial_density,
-                survive_array,
-                birth_array,
-            };
+        let mut survive_candidates: HashSet<usize> = HashSet::from_iter(1..max_neighbor);
+        let mut survive_array = vec![];
+        for _ in 0..rng.gen_range(0..max_neighbor) {
+            let candidate_index = rng.gen_range(0..survive_candidates.len());
+            let candidate = survive_candidates.iter().nth(candidate_index).unwrap().clone();
+            survive_array.push(candidate);
+            survive_candidates.remove(&candidate);
+        }
 
-            println!("[{}]: {:#?}", current_complete, task);
-            current_complete += 1;
+        let mut birth_candidates: HashSet<usize> = HashSet::from_iter(1..max_neighbor);
+        let mut birth_array = vec![];
+        for _ in 0..rng.gen_range(0..max_neighbor) {
+            let candidate_index = rng.gen_range(0..birth_candidates.len());
+            let candidate = birth_candidates.iter().nth(candidate_index).unwrap().clone();
+            birth_array.push(candidate);
+            birth_candidates.remove(&candidate);
+        }
+        
+        let task = CellularAutomatonParams{
+            neighborhood_type,
+            neighborhood_radius,
+            initial_density,
+            survive_array,
+            birth_array,
+        };
+
+        task
+    }
+
+    pub fn run(&mut self)
+    {
+        loop {
+            let task = self.generate_task();
+            self.sender.send(task).unwrap();
         }
     }
 }
