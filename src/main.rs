@@ -1,30 +1,33 @@
-// use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use std::thread;
-use spmc;
-
 mod field;
 mod rules;
 mod consumer;
 mod producer;
 
+use std::collections::VecDeque;
+
+
 fn main() {
     let num_of_consumers = 2;
     let width            = 64;
     let height           = 64;
-    let iters         = 16;
+    let iters            = 16;
 
-    let (sender, reciever) = spmc::channel();
+    let shared_buffer = Arc::new(Mutex::new(VecDeque::new()));
+
+    let input_buffer = Arc::clone(&shared_buffer);
+    let mut prod = producer::Producer::new(input_buffer);
+
     
-    let mut consumers = vec![];
-    for i in 0..num_of_consumers
+    let mut consumers_threads = vec![];
+    for id in 0..num_of_consumers
     {
-        let receiver = reciever.clone();
-        consumers.push(thread::spawn(move || {
-            let mut consumer = consumer::Consumer::new(receiver, i + 1);
-            consumer.run(height, width, iters)
-        }));
+        let output_buffer = Arc::clone(&shared_buffer);
+        let mut consumer = consumer::Consumer::new(output_buffer, id + 1);
+        let thread = thread::spawn(move || {consumer.run(height, width, iters)});
+        
+        consumers_threads.push(thread);
     }
-
-    let mut prod = producer::Producer::new(sender);
     prod.run();
 }

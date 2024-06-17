@@ -2,21 +2,21 @@ use rand::{thread_rng, Rng};
 use std::collections::HashSet;
 use crate::rules::CellularAutomatonParams;
 use crate::rules::Neighborhood;
-use spmc::Sender;
-
-
+use std::sync::{Arc, Mutex};
+use std::collections::VecDeque;
+use std::time::Duration;
 
 pub struct Producer
 {
-    sender    : Sender<CellularAutomatonParams>,
+    output_buffer: Arc<Mutex<VecDeque<CellularAutomatonParams>>>,
 }
 
 
 impl Producer
 {
-    pub fn new(sender : Sender<CellularAutomatonParams>) -> Self
+    pub fn new(output_buffer : Arc<Mutex<VecDeque<CellularAutomatonParams>>>) -> Self
     {
-        Self {sender}
+        Self {output_buffer}
     }
 
     pub fn generate_task(&self) -> CellularAutomatonParams
@@ -62,7 +62,8 @@ impl Producer
     {
         loop {
             let task = self.generate_task();
-            self.sender.send(task).unwrap();
+            self.output_buffer.lock().unwrap().push_front(task);
+            std::thread::sleep(Duration::from_millis(200));
         }
     }
 }
