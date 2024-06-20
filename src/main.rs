@@ -9,9 +9,9 @@ use std::collections::VecDeque;
 
 
 fn main() {
-    let num_of_consumers = 2;
-    let width            = 64;
-    let height           = 64;
+    let num_of_consumers = 8;
+    let width              = 32;
+    let height             = 32;
     let iters            = 16;
 
     let shared_buffer = Arc::new(Mutex::new(VecDeque::new()));
